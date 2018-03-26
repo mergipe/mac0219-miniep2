@@ -1,0 +1,9 @@
+/* Nome: Gustavo Mendes Maciel
+ * NUSP: 9298062
+ *
+ * Nome: Marcelo Baiano Pastorino Trylesinski
+ * NUSP: 9297996
+ *
+ * MAC0219 - MiniEP2
+ */
+
