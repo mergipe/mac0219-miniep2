@@ -7,3 +7,16 @@
  * MAC0219 - MiniEP2
  */
 
+A solução foi feita representando cada sapo/rã por uma thread. A mesma função
+é utilizada para sapos e rãs. Para diferenciar sapos de rãs, foi usado um
+struct que armazena o tipo ('R' ou 'S'), o id (int), a posicao do animal na
+lagoa e o movimento (int: -1 para sapos e 1 para rãs). A lagoa foi
+representada por um vetor dessa struct, de tamanho 2n + 1 (sendo n o número de
+sapos/rãs).
+O gerenciamento por contador global não foi muito eficiente, pois muitas vezes
+o programa termina antes de chegar a um deadlock. O valor do contador
+utilizado foi 10000 e a maioria dos testes foram feitos com n = 3.
+O gerenciamento por arbitro global foi melhor, pois fazia com que o programa
+terminasse apenas quando um deadlock fosse alcançado.
+Dos testes que foram feitos nenhuma história foi bem sucedida, talvez por
+causa da ordem que as threads foram criadas (i = 0 até n).

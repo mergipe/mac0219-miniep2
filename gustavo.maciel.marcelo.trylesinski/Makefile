@@ -9,13 +9,9 @@
 
 CC=gcc
 CFLAGS=-std=c99 -pthread
-N=3
 
 frogs: frogs.c
 	$(CC) -o frogs frogs.c $(CFLAGS)
 
 clean:
 	rm frogs
-
-run: frogs
-	./frogs $(N)

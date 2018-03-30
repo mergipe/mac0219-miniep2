@@ -7,7 +7,9 @@
  * MAC0219 - MiniEP2
  */
 
-#define COUNT_LIMIT 1000
+#define COUNT_LIMIT 10000
+#define MODE_COUNT 'c'
+#define MODE_MANAGER 'm'
 
 #include <assert.h>
 #include <pthread.h>
@@ -29,9 +31,11 @@ thdata *rocks;
 thdata empty_data = {0, -1, -1, 0};
 int n;
 
-/* Contadores globais */
+/* Variaveis globais */
 int count;
 int frogs_created;
+int deadlock;
+char mode;
 
 /* Mutex */
 pthread_mutex_t mutex;
@@ -47,12 +51,18 @@ void *manager_func(void *arg)
         pthread_cond_wait(&cond, &mutex);
     pthread_mutex_unlock(&mutex);
 
-    while (count < COUNT_LIMIT)
+    while (!deadlock)
     {
         pthread_mutex_lock(&mutex);
-        for (int i = 0; i < 2 * n + 1; i++)
-            printf("[%c%d]  ", rocks[i].type, rocks[i].id);
-        printf("\n");
+        int i;
+        for (i = 0; i < 2 * n + 1; i++)
+        {
+            if (rocks[i].id != empty_data.id)
+                if (rocks[i + rocks[i].move].id == empty_data.id ||
+                    rocks[i + rocks[i].move * 2].id == empty_data.id)
+                break;
+        }
+        if (i == 2 * n + 1) deadlock = 1;
         pthread_mutex_unlock(&mutex);
     }
 }
@@ -67,13 +77,25 @@ void *frog_action(void *arg)
     if (frogs_created >= 2 * n) pthread_cond_broadcast(&cond);
     pthread_mutex_unlock(&mutex);
 
-    while (count < COUNT_LIMIT)
+    while (!deadlock)
     {
         pthread_mutex_lock(&mutex);
-        if ((rocks[data->position + data->move].id == empty_data.id) ||
-                (rocks[data->position + 2 * data->move].id == empty_data.id))
+        if (mode == MODE_COUNT && count >= COUNT_LIMIT) deadlock = 1;
+        if (rocks[data->position + data->move].id == empty_data.id)
         {
-
+            rocks[data->position + data->move] = rocks[data->position];
+            rocks[data->position] = empty_data;
+            data->position += data->move;
+            count = 0;
+            printf("%c%d pulou 1 casa\n", data->type, data->id);
+        }
+        else if (rocks[data->position + 2 * data->move].id == empty_data.id)
+        {
+            rocks[data->position + 2 * data->move] = rocks[data->position];
+            rocks[data->position] = empty_data;
+            data->position += 2 * data->move;
+            count = 0;
+            printf("%c%d pulou 2 casas\n", data->type, data->id);
         }
         else
         {
@@ -92,19 +114,23 @@ int main(int numargs, char *arg[])
     thdata *thread_args;
 
     n = strtol(arg[1], NULL, 10);
+    mode = arg[2][0];
     frogs = malloc((2 * n) * sizeof (pthread_t));
     thread_args = malloc((2 * n) * sizeof (thdata));
-
     rocks = malloc((2 * n + 1) * sizeof (thdata));
     count = 0;
+    deadlock = 0;
     frogs_created = 0;
     pthread_mutex_init(&mutex, NULL);
 
     printf("\nNúmero de sapos/rãs: %d\n", n);
 
-    printf("Criando thread manager\n");
-    result = pthread_create(&manager, NULL, manager_func, NULL);
-    assert(!result);
+    if (mode == MODE_MANAGER)
+    {
+        printf("Criando thread manager\n");
+        result = pthread_create(&manager, NULL, manager_func, NULL);
+        assert(!result);
+    }
 
     /* Cria as threads de ras */
     for (int i = 0; i < n; i++)
@@ -142,9 +168,17 @@ int main(int numargs, char *arg[])
         printf("Thread %c%d finalizada\n", thread_args[i].type, thread_args[i].id);
     }
 
-    result = pthread_join(manager, NULL);
-    assert(!result);
-    printf("Thread manager finalizada\n");
+    if (mode == MODE_MANAGER)
+    {
+        result = pthread_join(manager, NULL);
+        assert(!result);
+        printf("Thread manager finalizada\n");
+    }
+
+    printf("\nEstado final da lagoa:\n");
+    for (int i = 0; i < 2 * n + 1; i++)
+        printf("[%c%d]  ", rocks[i].type, rocks[i].id);
+    printf("\n\n");
 
     /* Desaloca o que foi alocado na memoria */
     free(frogs);
